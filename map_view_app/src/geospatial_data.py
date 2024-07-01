@@ -3,17 +3,23 @@ from sqlalchemy import create_engine
 import psycopg2
 import geopandas as gpd
 
+def generate_parquet():
+    horton_password = keyring.get_password('reef', 'horton_password')
 
-horton_password = keyring.get_password('reef', 'horton_password')
+    # horton_password = "Dm[9.QxAXdx{3k1"
 
-con = create_engine(f'postgresql://data_science:{horton_password}@btanalytics.mlops.reefplatform.com:5432/bt_analytics')
+    connection = create_engine(
+        f'postgresql://data_science:{horton_password}@btanalytics.mlops.reefplatform.com:5432/bt_analytics')
 
-gdf = gpd.read_postgis("""
-select gid, gid::text as name, msa_short as msa, attractive as geoscore, geom
-from census.na_heatmap nh 
-union
-select gid, gid::text || ' (' || postcode || ') - ' || name as name, msa_name || ', ' || ctrycode as msa, bracket as geoscore, geom
-from census.eu_heatmap eh;
-""", con)
+    geo_df = gpd.read_postgis("""
+    select gid, gid::text as name, msa_short as msa, attractive as geoscore, geom
+    from census.na_heatmap nh 
+    union
+    select gid, gid::text || ' (' || postcode || ') - ' || name as name, msa_name || ', ' || ctrycode as msa, bracket as geoscore, geom
+    from census.eu_heatmap eh;
+    """, connection)
 
-print(type(gdf))
+    return geo_df
+
+
+

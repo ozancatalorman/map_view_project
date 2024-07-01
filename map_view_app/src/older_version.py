@@ -1,9 +1,9 @@
-
-
 from dash import Dash, dcc, html, Input, Output
 import geopandas as gpd
 import pandas as pd
 import plotly.express as px
+from monday_locations import get_monday_locations
+from geospatial_data import generate_parquet
 
 # Map of RE funnel stage to display colour
 cmap = {'Engaged':   'rgb(255, 255, 0)',    # Yellow
@@ -15,15 +15,18 @@ cmap = {'Engaged':   'rgb(255, 255, 0)',    # Yellow
         'Churned':   'rgb(255, 0, 0)'}      # Red
 
 # Read data (from files for demo)
-g = gpd.read_parquet('na_eu_geo.parquet').set_index('name')
-r = pd.read_csv('full_monday_locations.csv')
-r['colour'] = r['stage'].map(cmap)
-options = sorted(list(g['msa'].unique()))
+geo = generate_parquet().set_index("name")
+
+funnel = get_monday_locations("1431777117")
+
+funnel['colour'] = funnel['stage'].map(cmap)
+
+options = sorted(list(geo['msa'].unique()))
 
 app = Dash(__name__)
 
 app.layout = html.Div([
-    html.H4('Geoscore and locations by MSA'),
+    html.H4('Geospatial Data and Locations by MSA'),
     html.P('Select MSA'),
     dcc.Dropdown(
         id='msa',

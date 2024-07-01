@@ -1,7 +1,8 @@
+import ast
 import sys
 import boto3
-import ast
 import keyring
+
 
 def get_monday_api_key():
     # If platform is linux then running remotely so use AWS Secrets Manager
