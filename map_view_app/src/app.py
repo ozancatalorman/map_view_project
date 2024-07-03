@@ -55,7 +55,7 @@ credentials = {
 }
 dash_auth.BasicAuth(app,
                     credentials,
-                    secret_key = os.getenv('REEF_MAP_VIEW_SPSWD')
+                    secret_key = os.getenv('REEF_MAP_VIEW_SKEY')
                     )
 
 # App Layout with components and graph
