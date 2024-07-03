@@ -1,0 +1,6 @@
+# Dash App Authentication
+REEF_MAP_VIEW=map_view_app_password
+REEF_MAP_VIEW_SPSWD=map_view_app_secret_password
+
+# Monday API Key
+MONDAY_API_KEY=your_api_key

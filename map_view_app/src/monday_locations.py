@@ -1,4 +1,4 @@
-from helpers.monday_api_connection import get_monday_api_key
+from src.monday_api_connection import get_monday_api_key
 import requests
 import pandas as pd
 
