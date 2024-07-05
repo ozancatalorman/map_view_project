@@ -3,8 +3,6 @@ import ast
 import sys
 import boto3
 
-
-
 def get_monday_api_key():
     # If platform is linux then running remotely so use AWS Secrets Manager
     if sys.platform == 'linux':

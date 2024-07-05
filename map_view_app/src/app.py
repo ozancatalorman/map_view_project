@@ -2,8 +2,9 @@ import os
 from dash import Dash, dcc, html, Input, Output
 import dash_auth
 import geopandas as gpd
+from pyarrow import parquet
 import plotly.express as px
-from src.monday_locations import get_monday_locations
+from monday_locations import get_monday_locations
 
 # Map of funnel stage to display colour
 cmap = {'Engaged':   'rgb(253, 171, 61)',
