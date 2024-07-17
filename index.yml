@@ -1,0 +1,127 @@
+
+  tests-unit-map-view:
+    needs: build
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.9-slim
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run unit tests
+        run: pytest tests/unit
+
+  test-functional-map-view:
+    needs: check-branch
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.9-slim
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run functional tests
+        run: pytest tests/functional
+
+  security-image-map-view:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install bandit
+
+      - name: Run security audit
+        run: bandit -r /app
+
+  deploy-dev-map-view:
+    permissions:
+      id-token: write
+      contents: read
+    needs: [tests-unit-map-view,
+            tests-functional-map-view,
+            security-image-map-view,
+            security-code]
+    runs-on: ubuntu-latest
+    environment: dev
+    env:
+      TASK_DEFINITION_FAMILY: middlelayer-map-view-dev-task-definition
+      ECS_SERVICE_NAME: middlelayer-map-view-dev-service
+      ECS_CLUSTER_NAME: middlelayer-dev
+      S3_INFRA_BUCKET: middlelayer-infra
+    if: github.ref == 'refs/heads/dev'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::597532874516:role/github-deploy-middlelayer-dev
+          aws-region: us-east-2
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push Docker image to Amazon ECR
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: middlelayer/map-view
+          IMAGE_TAG: ${{ github.sha }}-dev
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG -t $REGISTRY/$REPOSITORY:latest -f ./docker/map-view/Dockerfile .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          docker push $REGISTRY/$REPOSITORY:latest
+
+      - name: Download Task Definition from S3
+        env:
+          TASK_DEFINITION_FILE_NAME: ${{ env.TASK_DEFINITION_FAMILY }}.json
+        run: |
+          aws s3 cp s3://$S3_INFRA_BUCKET/task_definitions/$TASK_DEFINITION_FILE_NAME task-definition.json
+
+      - name: Update Task Definition Image
+        run: |
+          sed -i 's/latest/${{ github.sha }}/g' task-definition.json
+
+      - name: Register ECS Task Definition
+        run: |
+          aws ecs register-task-definition --family $TASK_DEFINITION_FAMILY --cli-input-json 'file://task-definition.json'
+
+      - name: Update ECS Service
+        run: |
+          aws ecs update-service --cluster $ECS_CLUSTER_NAME --service $ECS_SERVICE_NAME --task-definition $TASK_DEFINITION_FAMILY
